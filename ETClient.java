@@ -22,7 +22,6 @@ public class ETClient extends JFrame implements Runnable {
   private JButton fileSelectShareButton; // ファイル選択or共有ボタン
   private JButton fileSaveButton; // ファイル保存ボタン
   private JButton fileEditButton; // ファイル編集ボタン
-  // private boolean isFileSelected; // ファイルが選択されているかどうか
   private String filename; // 編集しているファイル名
 
   public static void main(String[] args) {
@@ -33,7 +32,6 @@ public class ETClient extends JFrame implements Runnable {
 
   public ETClient() {
     super(APPNAME);
-    // isFileSelected = false;
 
     connectServer();
 
@@ -78,10 +76,10 @@ public class ETClient extends JFrame implements Runnable {
     this.getContentPane().add(filePanel, BorderLayout.NORTH);
     this.getContentPane().add(userPanel, BorderLayout.WEST);
 
-    this.setDefaultCloseOperation(EXIT_ON_CLOSE);
+    this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
     this.addWindowListener(new WindowAdapter() {
       @Override
-      public void windowClosing(WindowEvent e) {
+      public void windowClosed(WindowEvent e) {
         closeSocket(myNumber);
       }
     });
@@ -113,10 +111,6 @@ public class ETClient extends JFrame implements Runnable {
       socket = new Socket(addr, PORT); // ソケット生成
       System.out.println("Socket: " + socket);
       if(socket.isBound()) {
-        // BufferedReader in =
-        //   new BufferedReader(
-        //       new InputStreamReader(
-        //         socket.getInputStream()));
         OutputStream outStream = socket.getOutputStream();
         InputStream inStream = socket.getInputStream();
         PrintWriter out =
@@ -127,10 +121,8 @@ public class ETClient extends JFrame implements Runnable {
           new DataInputStream(inStream);
         System.out.print("Input USERNAME: ");
         myName = sc.next();
-
         out.println(myName);
         myNumber = dis.readInt();
-        System.out.println("my number: " + myNumber);
       }
     } catch(IOException ioe) {
       ioe.printStackTrace();
@@ -142,38 +134,39 @@ public class ETClient extends JFrame implements Runnable {
   }
 
   @Override
-  public void run() { // サーバーから情報受け取る
-    // try {
-    //   BufferedReader in =
-    //     new BUfferedReader(
-    //         new InputStreamReader(socket.getInputStream()));
-    //   while(!socket.isClosed()) {
-    //
-    //   }
-    // }
+  public void run() { // サーバーからの情報に対して処理
+    try {
+      InputStream inStream = socket.getInputStream();
+      BufferedReader in =
+        new BufferedReader(
+            new InputStreamReader(inStream));
+      while(!socket.isClosed()) {
+        String msg = in.readLine();
+        switch(msg) {
+          case "CLOSE_SOCKET":
+            if(socket != null) {
+              socket.close();
+              System.exit(0);
+            }
+            break;
+        }
+      }
+    } catch(IOException ioe) {
+      ioe.printStackTrace();
+    } catch(Exception e) {
+      e.printStackTrace();
+    }
   }
 
   void closeSocket(int userNumber) {
-    System.out.println("closeSocket called, " + "number: " + userNumber);
     try {
       OutputStream outStream = socket.getOutputStream();
-      InputStream inStream = socket.getInputStream();
       PrintWriter out =
         new PrintWriter(
             new BufferedWriter(
               new OutputStreamWriter(outStream)), true);
-      DataOutputStream dos =
-        new DataOutputStream(outStream);
-      DataInputStream dis =
-        new DataInputStream(inStream);
       out.println("REMOVE_USER");
-      dos.writeInt(userNumber);
-      dos.flush();
-      if(dis.readInt() == 1) {
-        if(socket != null) {
-          socket.close();
-        }
-      }
+      out.println(String.valueOf(userNumber));
     } catch(IOException ioe) {
       ioe.printStackTrace();
       System.exit(0);
@@ -210,8 +203,4 @@ public class ETClient extends JFrame implements Runnable {
   void setFileName(String filename) {
     this.filename = filename;
   }
-
-  // void setFileSelectStatus(boolean status) {
-  //   this.isFileSelected = status;
-  // }
 }

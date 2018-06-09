@@ -5,7 +5,6 @@ import java.util.*;
 public class ETServer {
   private static final int PORT = 8001; // 待受ポート番号
   private ServerSocket servSock; // サーバーソケット
-  // private ArrayList<ETUser> userMap; // 接続しているクライアントユーザーの可変長配列
   private Map<Integer, ETUser> userMap; // 接続しているクライアントユーザーのハッシュマップ
   private int userCount; // 接続したクライアントの数
 
@@ -44,11 +43,7 @@ public class ETServer {
               new InputStreamReader(inStream));
         DataOutputStream dos =
           new DataOutputStream(outStream);
-        // PrintWriter out =
-        //   new PrintWriter(
-        //       new BufferedWriter(
-        //         new OutputStreamWriter(
-        //           clientSock.getOutputStream())), true);
+
         String name = in.readLine();
         System.out.println("name: " + name);
         if(name != null) {
@@ -56,25 +51,6 @@ public class ETServer {
           addUser(clientSock, user);
           dos.writeInt(userCount);
         }
-        // String msg = in.readLine();
-        // System.out.println("Message came: " + msg);
-        // switch (msg) {
-        //   case "ADD_USER":
-        //     String name = in.readLine();
-        //     if(name != null) {
-        //       ETUser user = new ETUser(clientSock, name);
-        //       addUser(clientSock, user);
-        //       dos.writeInt(userCount);
-        //     }
-        //     break;
-        //   case "REMOVE_USER":
-        //     System.out.println("case: REMOVE");
-        //     int userNo = dis.readInt();
-        //     System.out.println("remove user no: " + userNo);
-        //     removeUser(userNo);
-        //     dos.writeInt(1);
-        //     break;
-        // }
       }
     } catch(IllegalArgumentException iae) {
       System.out.println("Port parameter is illegal");
@@ -94,6 +70,7 @@ public class ETServer {
     System.out.println(user.getName() + " disappear... " + "[" + user + "]");
     userMap.remove(userNo);
     displayUserList();
+    user.is_removed = true;
   }
 
   void displayUserList() {
@@ -110,7 +87,7 @@ public class ETServer {
   }
 
   void shareInsertStr(ETUser self, int offset, String insertStr) {
-    
+
   }
 
   ArrayList getUserList() {
@@ -122,40 +99,41 @@ public class ETServer {
 class ETUser implements Runnable {
   private Socket socket; // ソケット
   private String name; // ユーザーネーム
+  public boolean is_removed; // サーバがユーザを削除したかどうか
   private ETServer server = ETServer.getServerInstance(); // サーバー
   private List<EditAreaListener> listeners; // リスナの可変長配列
 
   public ETUser(Socket clientSock, String name) {
     this.socket = clientSock;
     this.name = name;
+    this.is_removed = false;
 
     Thread thread = new Thread(this);
     thread.start();
   }
 
   @Override
-  public void run() {
+  public void run() { // クライアントからの情報に対して処理
     try {
       InputStream inStream = socket.getInputStream();
       OutputStream outStream = socket.getOutputStream();
       BufferedReader in =
         new BufferedReader(
             new InputStreamReader(inStream));
-      DataInputStream dis =
-        new DataInputStream(inStream);
-      DataOutputStream dos =
-        new DataOutputStream(outStream);
+      PrintWriter out =
+        new PrintWriter(
+            new BufferedWriter(
+              new OutputStreamWriter(outStream)), true);
 
       String msg = in.readLine();
       System.out.println("Message came: " + msg);
       switch(msg) {
         case "REMOVE_USER":
-          System.out.println("This is REMOVE_USER case");
-          int userNo = dis.readInt();
-          System.out.println("remove user no: " + userNo);
+          int userNo = Integer.parseInt(in.readLine());
           server.removeUser(userNo);
-          dos.writeInt(1);
-          dos.flush();
+          if(is_removed) {
+            out.println("CLOSE_SOCKET");
+          }
           break;
       }
     } catch(IOException ioe) {

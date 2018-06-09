@@ -19,7 +19,7 @@ public class ETClient extends JFrame implements Runnable {
   private JTextArea fileEditArea; // ファイルを編集するテキストエリア
   private JList userList; // クライアント(ユーザー)のリスト
   private JLabel filenameLabel; // ファイル名のラベル
-  private JButton fileSelectShareButton; // ファイル選択or共有ボタン
+  private JButton fileSelectButton; // ファイル選択ボタン
   private JButton fileSaveButton; // ファイル保存ボタン
   private JButton fileEditButton; // ファイル編集ボタン
   private String filename; // 編集しているファイル名
@@ -42,12 +42,12 @@ public class ETClient extends JFrame implements Runnable {
     fileEditArea = new JTextArea();
     fileEditArea.getDocument().addDocumentListener(new ETListener(this, socket));
     userList = new JList();
-    fileSelectShareButton = new JButton("Select file");
+    fileSelectButton = new JButton("Select file");
     fileSaveButton = new JButton("Save file");
     fileEditButton = new JButton("Edit");
 
-    fileSelectShareButton.addActionListener(new ETListener(this, socket));
-    fileSelectShareButton.setActionCommand("select");
+    fileSelectButton.addActionListener(new ETListener(this, socket));
+    fileSelectButton.setActionCommand("select");
 
     fileSaveButton.addActionListener(new ETListener(this, socket));
     fileSaveButton.setActionCommand("save");
@@ -59,7 +59,7 @@ public class ETClient extends JFrame implements Runnable {
     filePanel.setLayout(new FlowLayout());
     filenameLabel = new JLabel("Let's select file");
     filePanel.add(filenameLabel);
-    filePanel.add(fileSelectShareButton);
+    filePanel.add(fileSelectButton);
     filePanel.add(fileSaveButton);
     filePanel.add(fileEditButton);
 
@@ -189,8 +189,8 @@ public class ETClient extends JFrame implements Runnable {
     return this.filenameLabel;
   }
 
-  JButton getSelectShareButton() {
-    return this.fileSelectShareButton;
+  JButton getSelectButton() {
+    return this.fileSelectButton;
   }
 
   JButton getSaveButton() {

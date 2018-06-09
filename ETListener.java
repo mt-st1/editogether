@@ -8,7 +8,6 @@ import javax.swing.event.*;
 import javax.swing.filechooser.*;
 
 class ETListener implements ActionListener, EditAreaListener {
-  private static final int SHARE = 3;
   private ETClient window;
   private Socket socket; // 接続に用いるソケット
 
@@ -31,22 +30,18 @@ class ETListener implements ActionListener, EditAreaListener {
     } else if(cmd.equals("save")) {
       fc.setSelectedFile(new File(window.getFileName()));
       btn_status = fc.showSaveDialog(container);
-    } else if(cmd.equals("share")) {
-      btn_status = SHARE;
     } else {
       return;
     }
 
-    if(btn_status == SHARE) {
-
-    } else if(btn_status != JFileChooser.APPROVE_OPTION) {
+    if(btn_status != JFileChooser.APPROVE_OPTION) {
       return;
     }
+
     File file = fc.getSelectedFile();
     JTextArea fileEditArea = window.getTextArea();
-    JButton fileSelectShareButton = window.getSelectShareButton();
+    JButton fileSelectButton = window.getSelectButton();
     if(cmd.equals("select")) {
-      // window.setFileSelectStatus(true);
       JLabel filenameLabel = window.getFileNameLabel();
       filenameLabel.setText(fc.getName(file));
       window.setFileName(fc.getName(file));
@@ -57,8 +52,6 @@ class ETListener implements ActionListener, EditAreaListener {
               new FileReader(file));
         fileEditArea.read(br, null);
         window.getSaveButton().setEnabled(true);
-        fileSelectShareButton.setText("Share Data");
-        fileSelectShareButton.setActionCommand("share");
       } catch(FileNotFoundException fnfe) {
         fnfe.printStackTrace();
       } catch(IOException ioe) {

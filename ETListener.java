@@ -1,16 +1,23 @@
 import java.io.*;
+import java.net.*;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
+import javax.swing.text.*;
+import javax.swing.event.*;
 import javax.swing.filechooser.*;
-// import javax.swing.filechooser.FileFilter;
 
-class ETListener implements ActionListener {
+class ETListener implements ActionListener, EditAreaListener {
+  private static final int SHARE = 3;
   private ETClient window;
-  public ETListener(ETClient window) {
+  private Socket socket; // 接続に用いるソケット
+
+  public ETListener(ETClient window, Socket socket) {
     this.window = window;
+    this.socket = socket;
   }
 
+  @Override
   public void actionPerformed(ActionEvent e) {
     String cmd = e.getActionCommand();
     Container container = window.getContentPane();
@@ -18,28 +25,40 @@ class ETListener implements ActionListener {
     int btn_status;
 
     if(cmd.equals("select")) {
+      fc.setApproveButtonText("みんなで編集");
+      fc.setApproveButtonToolTipText("選択したファイルをユーザーと共有します");
       btn_status = fc.showOpenDialog(container);
     } else if(cmd.equals("save")) {
+      fc.setSelectedFile(new File(window.getFileName()));
       btn_status = fc.showSaveDialog(container);
+    } else if(cmd.equals("share")) {
+      btn_status = SHARE;
     } else {
       return;
     }
 
-    if(btn_status != JFileChooser.APPROVE_OPTION) {
+    if(btn_status == SHARE) {
+
+    } else if(btn_status != JFileChooser.APPROVE_OPTION) {
       return;
     }
     File file = fc.getSelectedFile();
     JTextArea fileEditArea = window.getTextArea();
+    JButton fileSelectShareButton = window.getSelectShareButton();
     if(cmd.equals("select")) {
       // window.setFileSelectStatus(true);
-      JLabel filenameLabel = window.getLabel();
+      JLabel filenameLabel = window.getFileNameLabel();
       filenameLabel.setText(fc.getName(file));
+      window.setFileName(fc.getName(file));
       BufferedReader br = null;
       try {
         br =
           new BufferedReader(
               new FileReader(file));
         fileEditArea.read(br, null);
+        window.getSaveButton().setEnabled(true);
+        fileSelectShareButton.setText("Share Data");
+        fileSelectShareButton.setActionCommand("share");
       } catch(FileNotFoundException fnfe) {
         fnfe.printStackTrace();
       } catch(IOException ioe) {
@@ -72,5 +91,37 @@ class ETListener implements ActionListener {
         }
       }
     }
+  }
+
+  @Override
+  public void handleShareInsert(DocumentEvent e) {
+    int editLength = e.getLength();
+    int offset = e.getOffset();
+    try {
+      String insertStr = e.getDocument().getText(0, editLength);
+      // server.shareInsertStr(window.getSelf(), offset, insertStr);
+    } catch(BadLocationException ble) {
+      ble.printStackTrace();
+    }
+  }
+
+  @Override
+  public void handleShareRemove(DocumentEvent e) {
+
+  }
+
+  @Override
+  public void insertUpdate(DocumentEvent e) {
+    handleShareInsert(e);
+  }
+
+
+  @Override
+  public void removeUpdate(DocumentEvent e) {
+    handleShareRemove(e);
+  }
+
+  @Override
+  public void changedUpdate(DocumentEvent e) {
   }
 }

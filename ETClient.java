@@ -26,7 +26,7 @@ public class ETClient extends JFrame implements Runnable {
 
   public static void main(String[] args) {
     ETClient window = new ETClient();
-    window.setSize(800, 600);
+    window.setSize(800, 800);
     window.setVisible(true);
   }
 
@@ -37,6 +37,7 @@ public class ETClient extends JFrame implements Runnable {
 
     JPanel filePanel = new JPanel();
     JPanel userPanel = new JPanel();
+    userPanel.setPreferredSize(new Dimension(150, 800));
 
     fileEditArea = new JTextArea();
     fileEditArea.getDocument().addDocumentListener(new ETListener(this, socket));

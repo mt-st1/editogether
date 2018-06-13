@@ -1,2 +1,4 @@
-# editogether
-An application to be produced in software production experiment in university class
+# EdiTogether
+Javaを用いたソケット通信(TCP/IP通信)によるソースコード共同編集アプリケーション  
+指定したファイルを複数人でリアルタイムで共同編集し、保存することができる  
+GUIはSwingで作成  

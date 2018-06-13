@@ -142,10 +142,11 @@ class ETUser implements Runnable {
   }
 
   void arrivedData(String msg, String value) throws IOException {
-    System.out.println(ARRIVEDPHRASE + msg);
-    System.out.println();
     switch(msg) {
       case "REMOVE_USER":
+        System.out.println("from " + getName());
+        System.out.println(ARRIVEDPHRASE + msg);
+        System.out.println();
         int userNo = Integer.parseInt(value);
         server.removeUser(userNo);
         if(isRemoved) {
@@ -154,9 +155,15 @@ class ETUser implements Runnable {
         }
         break;
       case "SHARE_FILE_CONTENT":
+        System.out.println("from " + getName());
+        System.out.println(ARRIVEDPHRASE + msg);
+        System.out.println();
         shareOthers("SET_FILE_CONTENT", value, false);
         break;
       case "SHARE_FILE_INFO":
+        System.out.println("from " + getName());
+        System.out.println(ARRIVEDPHRASE + msg + " " + value);
+        System.out.println();
         shareOthers("SET_FILE_INFO", value, true);
         break;
       default:

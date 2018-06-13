@@ -72,7 +72,7 @@ public class ETServer {
     System.out.println("X " + user.getName() + " disappear... " + "[" + user + "]");
     userMap.remove(userNo);
     displayUserList();
-    user.is_removed = true;
+    user.isRemoved = true;
   }
 
   void displayUserList() {
@@ -102,7 +102,7 @@ public class ETServer {
 class ETUser implements Runnable {
   private Socket socket; // ソケット
   private String name; // ユーザーネーム
-  public boolean is_removed; // サーバがユーザを削除したかどうか
+  public boolean isRemoved; // サーバがユーザを削除したかどうか
   private ETServer server = ETServer.getServerInstance(); // サーバー
   private List<EditAreaListener> listeners; // リスナの可変長配列
   private final String SENDPHRASE = "Send message >> "; // 送信句
@@ -111,14 +111,14 @@ class ETUser implements Runnable {
   public ETUser(Socket clientSock, String name) {
     this.socket = clientSock;
     this.name = name;
-    this.is_removed = false;
+    this.isRemoved = false;
 
     Thread thread = new Thread(this);
     thread.start();
   }
 
   @Override
-  public void run() { // クライアントからの処理に対して処理
+  public void run() { // クライアントからの情報に対して処理
     InputStream inStream = null;
     BufferedReader in = null;
     try {
@@ -141,15 +141,16 @@ class ETUser implements Runnable {
     }
   }
 
-  void arrivedData(String msg, String value) {
+  void arrivedData(String msg, String value) throws IOException {
     System.out.println(ARRIVEDPHRASE + msg);
     System.out.println();
     switch(msg) {
       case "REMOVE_USER":
         int userNo = Integer.parseInt(value);
         server.removeUser(userNo);
-        if(is_removed) {
+        if(isRemoved) {
           sendData("CLOSE_SOCKET");
+          this.socket.close();
         }
         break;
       case "SHARE_FILE_CONTENT":
@@ -197,11 +198,11 @@ class ETUser implements Runnable {
     }
   }
 
-  void shareOthers(String msg, String value, boolean display) {
+  void shareOthers(String msg, String value, boolean detail) {
     for(ETUser user : server.getUserMap().values()) {
       if(user != this) {
         String data = msg + " " + value;
-        if(display) System.out.println(SENDPHRASE + data + "\n");
+        if(detail) System.out.println(SENDPHRASE + data + "\n");
         else System.out.println(SENDPHRASE + msg + "\n");
         sendDataTo(user.getSocket(), data);
       }

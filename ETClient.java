@@ -10,10 +10,13 @@ import javax.swing.event.*;
 public class ETClient extends JFrame implements Runnable {
   private static final String APPNAME = "EdiTogether!"; // App名
   private static final int PORT = 8001; // 接続先ポート番号
+  private final String FILESEP = "::!::"; // ファイル区切り文字列
+  private final String SENDPHRASE = "Send message >> "; // 送信句
+  private final String ARRIVEDPHRASE = "Arrived message << "; // 受信句
   private Socket socket; // 接続に用いるソケット
-  private Thread thread; // 編集監視用スレッド
   private String myName; // ユーザーネーム
   private int myNumber; // ユーザー番号
+  private Thread thread; // サーバーからの情報監視用スレッド
 
   // Swingコンポーネント
   private JTextArea fileEditArea; // ファイルを編集するテキストエリア
@@ -91,10 +94,14 @@ public class ETClient extends JFrame implements Runnable {
 
   public void connectServer() {
     Scanner sc = new Scanner(System.in);
+    OutputStream outStream = null;
+    InputStream inStream = null;
+    PrintWriter out = null;
+    DataInputStream dis = null;
     try {
       InetAddress addr = null;
       while(true) {
-        System.out.print("Input IPAdress: ");
+        System.out.print("Input IPAdress > ");
         try {
           addr = InetAddress.getByName(sc.next()); // IPアドレスの変換
           System.out.println("IP Adress: " + addr);
@@ -112,15 +119,13 @@ public class ETClient extends JFrame implements Runnable {
       socket = new Socket(addr, PORT); // ソケット生成
       System.out.println("Socket: " + socket);
       if(socket.isBound()) {
-        OutputStream outStream = socket.getOutputStream();
-        InputStream inStream = socket.getInputStream();
-        PrintWriter out =
-          new PrintWriter(
-              new BufferedWriter(
-                new OutputStreamWriter(outStream)), true);
-        DataInputStream dis =
-          new DataInputStream(inStream);
-        System.out.print("Input USERNAME: ");
+        outStream = socket.getOutputStream();
+        inStream = socket.getInputStream();
+        out = new PrintWriter(
+                new BufferedWriter(
+                  new OutputStreamWriter(outStream)), true);
+        dis = new DataInputStream(inStream);
+        System.out.print("Input USERNAME > ");
         myName = sc.next();
         out.println(myName);
         myNumber = dis.readInt();
@@ -136,21 +141,18 @@ public class ETClient extends JFrame implements Runnable {
 
   @Override
   public void run() { // サーバーからの情報に対して処理
+    InputStream inStream = null;
+    BufferedReader in = null;
     try {
-      InputStream inStream = socket.getInputStream();
-      BufferedReader in =
-        new BufferedReader(
+      inStream = socket.getInputStream();
+      in = new BufferedReader(
             new InputStreamReader(inStream));
       while(!socket.isClosed()) {
-        String msg = in.readLine();
-        switch(msg) {
-          case "CLOSE_SOCKET":
-            if(socket != null) {
-              socket.close();
-              System.exit(0);
-            }
-            break;
-        }
+        String words = in.readLine();
+        String[] data = words.split(" ", 2);
+        String msg = data[0];
+        String value = (data.length <= 1 ? "" : data[1]);
+        arrivedData(msg, value);
       }
     } catch(IOException ioe) {
       ioe.printStackTrace();
@@ -159,26 +161,65 @@ public class ETClient extends JFrame implements Runnable {
     }
   }
 
-  void closeSocket(int userNumber) {
+  void arrivedData(String msg, String value) throws IOException {
+    switch(msg) {
+      case "CLOSE_SOCKET":
+        System.out.println(ARRIVEDPHRASE + msg);
+        System.out.println();
+        if(socket != null) {
+          socket.close();
+          System.exit(0);
+        }
+        break;
+      case "SET_FILE_CONTENT":
+        System.out.println(ARRIVEDPHRASE + msg);
+        System.out.println();
+        fileEditArea.setText("");
+        String[] lines = value.split(FILESEP, 0);
+        for(String line : lines) {
+          fileEditArea.append(line + "\n");
+        }
+        fileSaveButton.setEnabled(true);
+        break;
+      case "SET_FILE_INFO":
+        System.out.println(ARRIVEDPHRASE + msg + " " + value);
+        System.out.println();
+        setFileName(value);
+        break;
+      default:
+        System.out.println("DON'T MATCH");
+    }
+  }
+
+  void sendData(String data) {
+    OutputStream outStream = null;
+    PrintWriter out = null;
+    System.out.println(SENDPHRASE + data);
+    System.out.println();
     try {
-      OutputStream outStream = socket.getOutputStream();
-      PrintWriter out =
-        new PrintWriter(
-            new BufferedWriter(
-              new OutputStreamWriter(outStream)), true);
-      out.println("REMOVE_USER");
-      out.println(String.valueOf(userNumber));
+      outStream = socket.getOutputStream();
+      out = new PrintWriter(
+              new BufferedWriter(
+                new OutputStreamWriter(outStream)), true);
+      out.println(data);
     } catch(IOException ioe) {
       ioe.printStackTrace();
-      System.exit(0);
     } catch(Exception e) {
       e.printStackTrace();
-      System.exit(0);
     }
+  }
+
+  void closeSocket(int userNumber) {
+    String data = "REMOVE_USER" + " " + (String.valueOf(userNumber));
+    sendData(data);
   }
 
   Socket getSocket() {
     return this.socket;
+  }
+
+  int getNumber() {
+    return this.myNumber;
   }
 
   JTextArea getTextArea() {
@@ -203,5 +244,6 @@ public class ETClient extends JFrame implements Runnable {
 
   void setFileName(String filename) {
     this.filename = filename;
+    this.filenameLabel.setText(filename);
   }
 }

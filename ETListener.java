@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.*;
+import java.util.*;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
@@ -8,8 +9,14 @@ import javax.swing.event.*;
 import javax.swing.filechooser.*;
 
 class ETListener implements ActionListener, EditAreaListener {
-  private ETClient window;
+  private final String FILESEP = "::!::"; // ファイル区切り文字列
+  private final String SENDPHRASE = "Send message >> "; // 送信句
+  private ETClient window; // クライアント(GUI情報)
   private Socket socket; // 接続に用いるソケット
+  private enum SendType { // 送信する内容の識別子
+    FILE_CONTNET,
+    FILE_INFO,
+  }
 
   public ETListener(ETClient window, Socket socket) {
     this.window = window;
@@ -42,28 +49,23 @@ class ETListener implements ActionListener, EditAreaListener {
     JTextArea fileEditArea = window.getTextArea();
     JButton fileSelectButton = window.getSelectButton();
     if(cmd.equals("select")) {
+      String filename = fc.getName(file);
       JLabel filenameLabel = window.getFileNameLabel();
-      filenameLabel.setText(fc.getName(file));
-      window.setFileName(fc.getName(file));
+      filenameLabel.setText(filename);
+      window.setFileName(filename);
       BufferedReader br = null;
       try {
-        br =
-          new BufferedReader(
+        br = new BufferedReader(
               new FileReader(file));
         fileEditArea.read(br, null);
         window.getSaveButton().setEnabled(true);
+        String fileStr = getFileStr(file);
+        sendData("SHARE_FILE_CONTENT" + " " + fileStr, SendType.FILE_CONTNET);
+        sendData("SHARE_FILE_INFO" + " " + filename, SendType.FILE_INFO);
       } catch(FileNotFoundException fnfe) {
         fnfe.printStackTrace();
       } catch(IOException ioe) {
         ioe.printStackTrace();
-      } finally {
-        if(br != null) {
-          try {
-            br.close();
-          } catch(IOException ioe) {
-            ioe.printStackTrace();
-          }
-        }
       }
     } else if(cmd.equals("save")) {
       BufferedWriter bw = null;
@@ -74,16 +76,37 @@ class ETListener implements ActionListener, EditAreaListener {
         fileEditArea.write(bw);
       } catch(IOException ioe) {
         ioe.printStackTrace();
-      } finally {
-        if(bw != null) {
-          try {
-            bw.close();
-          } catch(IOException ioe) {
-            ioe.printStackTrace();
-          }
-        }
       }
     }
+  }
+
+  void sendData(String data, SendType type) throws IOException {
+    OutputStream outStream = socket.getOutputStream();
+    PrintWriter out = new PrintWriter(
+                        new BufferedWriter(
+                          new OutputStreamWriter(outStream)), true);
+    switch(type) {
+      case FILE_CONTNET:
+        System.out.println(SENDPHRASE + "SHARE_FILE_CONTENT");
+        System.out.println();
+        break;
+      case FILE_INFO:
+        System.out.println(SENDPHRASE + data);
+        System.out.println();
+        break;
+    }
+    out.println(data);
+  }
+
+  String getFileStr(File file) throws IOException {
+    BufferedReader br = new BufferedReader(new FileReader(file));
+    java.util.List<String> lines = new ArrayList<String>();
+    String line = br.readLine();
+    while(line != null) {
+      lines.add(line);
+      line = br.readLine();
+    }
+    return String.join(FILESEP, lines);
   }
 
   @Override

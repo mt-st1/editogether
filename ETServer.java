@@ -29,6 +29,10 @@ public class ETServer {
   }
 
   public void start() throws IOException {
+    InputStream inStream = null;
+    OutputStream outStream = null;
+    BufferedReader in = null;
+    DataOutputStream dos = null;
     try {
       servSock = new ServerSocket(PORT);
       System.out.println("Started: " + servSock);
@@ -36,16 +40,13 @@ public class ETServer {
       while(!servSock.isClosed()) {
         Socket clientSock = servSock.accept(); // クライアントからの接続待機
         System.out.println("Connection accepted: " + clientSock);
-        InputStream inStream = clientSock.getInputStream();
-        OutputStream outStream = clientSock.getOutputStream();
-        BufferedReader in =
-          new BufferedReader(
+        inStream = clientSock.getInputStream();
+        outStream = clientSock.getOutputStream();
+        in = new BufferedReader(
               new InputStreamReader(inStream));
-        DataOutputStream dos =
-          new DataOutputStream(outStream);
+        dos = new DataOutputStream(outStream);
 
         String name = in.readLine();
-        System.out.println("name: " + name);
         if(name != null) {
           ETUser user = new ETUser(clientSock, name);
           addUser(clientSock, user);
@@ -61,13 +62,13 @@ public class ETServer {
     if(userMap.containsValue(user)) return;
     userCount++;
     userMap.put(userCount, user);
-    System.out.println(user.getName() + " came! " + "[" + user + "]");
+    System.out.println("O " + user.getName() + " came! " + "[" + user + "]");
     displayUserList();
   }
 
   void removeUser(int userNo) {
     ETUser user = userMap.get(userNo);
-    System.out.println(user.getName() + " disappear... " + "[" + user + "]");
+    System.out.println("X " + user.getName() + " disappear... " + "[" + user + "]");
     userMap.remove(userNo);
     displayUserList();
     user.is_removed = true;
@@ -82,12 +83,12 @@ public class ETServer {
     System.out.println();
   }
 
-  void outUser(ETUser user) {
+  void shareInsertStr(ETUser self, int offset, String insertStr) {
 
   }
 
-  void shareInsertStr(ETUser self, int offset, String insertStr) {
-
+  HashMap<Integer, ETUser> getUserMap() {
+    return (HashMap<Integer, ETUser>)userMap;
   }
 
   ArrayList getUserList() {
@@ -102,6 +103,8 @@ class ETUser implements Runnable {
   public boolean is_removed; // サーバがユーザを削除したかどうか
   private ETServer server = ETServer.getServerInstance(); // サーバー
   private List<EditAreaListener> listeners; // リスナの可変長配列
+  private final String SENDPHRASE = "Send message >> "; // 送信句
+  private final String ARRIVEDPHRASE = "Arrived message << "; // 受信句
 
   public ETUser(Socket clientSock, String name) {
     this.socket = clientSock;
@@ -113,28 +116,21 @@ class ETUser implements Runnable {
   }
 
   @Override
-  public void run() { // クライアントからの情報に対して処理
+  public void run() { // クライアントからの処理に対して処理
+    InputStream inStream = null;
+    BufferedReader in = null;
     try {
-      InputStream inStream = socket.getInputStream();
-      OutputStream outStream = socket.getOutputStream();
-      BufferedReader in =
-        new BufferedReader(
+      inStream = socket.getInputStream();
+      in = new BufferedReader(
             new InputStreamReader(inStream));
-      PrintWriter out =
-        new PrintWriter(
-            new BufferedWriter(
-              new OutputStreamWriter(outStream)), true);
-
-      String msg = in.readLine();
-      System.out.println("Message came: " + msg);
-      switch(msg) {
-        case "REMOVE_USER":
-          int userNo = Integer.parseInt(in.readLine());
-          server.removeUser(userNo);
-          if(is_removed) {
-            out.println("CLOSE_SOCKET");
-          }
-          break;
+      while(!socket.isClosed()) {
+        String words = in.readLine();
+        if(words != null) {
+          String[] data = words.split(" ", 2);
+          String msg = data[0];
+          String value = (data.length <= 1 ? "" : data[1]);
+          arrivedData(msg, value);
+        }
       }
     } catch(IOException ioe) {
       ioe.printStackTrace();
@@ -143,7 +139,78 @@ class ETUser implements Runnable {
     }
   }
 
-  public String getName() {
+  void arrivedData(String msg, String value) {
+    System.out.println(ARRIVEDPHRASE + msg);
+    System.out.println();
+    switch(msg) {
+      case "REMOVE_USER":
+        int userNo = Integer.parseInt(value);
+        server.removeUser(userNo);
+        if(is_removed) {
+          sendData("CLOSE_SOCKET");
+        }
+        break;
+      case "SHARE_FILE_CONTENT":
+        shareOthers("SET_FILE_CONTENT", value, false);
+        break;
+      case "SHARE_FILE_INFO":
+        shareOthers("SET_FILE_INFO", value, true);
+        break;
+      default:
+        System.out.println("DON'T MATCH");
+    }
+  }
+
+  void sendData(String data) {
+    OutputStream outStream = null;
+    PrintWriter out = null;
+    System.out.println(SENDPHRASE + data);
+    System.out.println();
+    try {
+      outStream = socket.getOutputStream();
+      out = new PrintWriter(
+              new BufferedWriter(
+                new OutputStreamWriter(outStream)), true);
+      out.println(data);
+    } catch(IOException ioe) {
+      ioe.printStackTrace();
+    } catch(Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+  void sendDataTo(Socket toSocket, String data) {
+    OutputStream outStream = null;
+    PrintWriter out = null;
+    try {
+      outStream = toSocket.getOutputStream();
+      out = new PrintWriter(
+              new BufferedWriter(
+                new OutputStreamWriter(outStream)), true);
+      out.println(data);
+    } catch(IOException ioe) {
+      ioe.printStackTrace();
+    } catch(Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+  void shareOthers(String msg, String value, boolean display) {
+    for(ETUser user : server.getUserMap().values()) {
+      if(user != this) {
+        String data = msg + " " + value;
+        if(display) System.out.println(SENDPHRASE + data + "\n");
+        else System.out.println(SENDPHRASE + msg + "\n");
+        sendDataTo(user.getSocket(), data);
+      }
+    }
+  }
+
+  Socket getSocket() {
+    return this.socket;
+  }
+
+  String getName() {
     return this.name;
   }
 }

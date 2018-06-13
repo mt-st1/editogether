@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.stream.*;
 
 public class ETServer {
   private static final int PORT = 8001; // 待受ポート番号
@@ -76,8 +77,8 @@ public class ETServer {
 
   void displayUserList() {
     System.out.println("<User List>");
-    for(Integer key : userMap.keySet()) {
-      System.out.print(userMap.get(key).getName() + ", ");
+    for(String username : getUserNameList()) {
+      System.out.print(username + ", ");
     }
     System.out.println();
     System.out.println();
@@ -91,9 +92,10 @@ public class ETServer {
     return (HashMap<Integer, ETUser>)userMap;
   }
 
-  ArrayList getUserList() {
-    ArrayList<ETUser> userList = new ArrayList<ETUser>(userMap.values());
-    return userList;
+  List<String> getUserNameList() {
+    return userMap.values().stream()
+                           .map(user -> user.getName())
+                           .collect(Collectors.toList());
   }
 }
 

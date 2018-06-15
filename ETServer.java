@@ -84,10 +84,6 @@ public class ETServer {
     System.out.println();
   }
 
-  void shareInsertStr(ETUser self, int offset, String insertStr) {
-
-  }
-
   HashMap<Integer, ETUser> getUserMap() {
     return (HashMap<Integer, ETUser>)userMap;
   }
@@ -166,6 +162,17 @@ class ETUser implements Runnable {
         System.out.println();
         shareOthers("SET_FILE_INFO", value, true);
         break;
+      case "SHARE_PARTIAL_INSERT":
+        System.out.println("from " + getName());
+        System.out.println(ARRIVEDPHRASE + msg + " " + value);
+        System.out.println();
+        shareOthers("INSERT_PARTIAL", value, true);
+        break;
+      case "SHARE_PARTIAL_REMOVE":
+        System.out.println(ARRIVEDPHRASE + msg + " " + value);
+        System.out.println();
+        shareOthers("REMOVE_PARTIAL", value, true);
+        break;
       default:
         System.out.println("DON'T MATCH");
     }
@@ -209,9 +216,9 @@ class ETUser implements Runnable {
     for(ETUser user : server.getUserMap().values()) {
       if(user != this) {
         String data = msg + " " + value;
+        sendDataTo(user.getSocket(), data);
         if(detail) System.out.println(SENDPHRASE + data + "\n");
         else System.out.println(SENDPHRASE + msg + "\n");
-        sendDataTo(user.getSocket(), data);
       }
     }
   }

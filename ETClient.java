@@ -6,6 +6,7 @@ import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.event.*;
+import javax.swing.text.Document;
 
 public class ETClient extends JFrame implements Runnable {
   private static final String APPNAME = "EdiTogether!"; // App名
@@ -14,6 +15,7 @@ public class ETClient extends JFrame implements Runnable {
   private final String SENDPHRASE = "Send message >> "; // 送信句
   private final String ARRIVEDPHRASE = "Arrived message << "; // 受信句
   private Socket socket; // 接続に用いるソケット
+  private ETListener listener; // リスナ
   private String myName; // ユーザーネーム
   private int myNumber; // ユーザー番号
   private Thread thread; // サーバーからの情報監視用スレッド
@@ -42,21 +44,22 @@ public class ETClient extends JFrame implements Runnable {
     JPanel userPanel = new JPanel();
     userPanel.setPreferredSize(new Dimension(150, 800));
 
+    listener = new ETListener(this, socket);
     fileEditArea = new JTextArea();
-    fileEditArea.getDocument().addDocumentListener(new ETListener(this, socket));
+    enableDocumentListener(fileEditArea.getDocument());
     userList = new JList();
     fileSelectButton = new JButton("Select file");
     fileSaveButton = new JButton("Save file");
     fileEditButton = new JButton("Edit");
 
-    fileSelectButton.addActionListener(new ETListener(this, socket));
+    fileSelectButton.addActionListener(listener);
     fileSelectButton.setActionCommand("select");
 
-    fileSaveButton.addActionListener(new ETListener(this, socket));
+    fileSaveButton.addActionListener(listener);
     fileSaveButton.setActionCommand("save");
     fileSaveButton.setEnabled(false);
 
-    fileEditButton.addActionListener(new ETListener(this, socket));
+    fileEditButton.addActionListener(listener);
     fileEditButton.setActionCommand("edit");
 
     filePanel.setLayout(new FlowLayout());
@@ -174,17 +177,53 @@ public class ETClient extends JFrame implements Runnable {
       case "SET_FILE_CONTENT":
         System.out.println(ARRIVEDPHRASE + msg);
         System.out.println();
+        disableDocumentListener(fileEditArea.getDocument());
         fileEditArea.setText("");
         String[] lines = value.split(FILESEP, 0);
         for(String line : lines) {
           fileEditArea.append(line + "\n");
         }
+        enableDocumentListener(fileEditArea.getDocument());
         fileSaveButton.setEnabled(true);
         break;
       case "SET_FILE_INFO":
         System.out.println(ARRIVEDPHRASE + msg + " " + value);
         System.out.println();
         setFileName(value);
+        break;
+      case "INSERT_PARTIAL":
+        disableDocumentListener(fileEditArea.getDocument());
+        System.out.println(ARRIVEDPHRASE + msg + " " + value);
+        System.out.println();
+        String[] insertData = value.split(" ", 0);
+        String insertStr = insertData[0];
+        int pos = Integer.parseInt(insertData[1]);
+        switch(insertStr) {
+          case "SPACE":
+            fileEditArea.insert(" ", pos);
+            break;
+          case "TAB":
+            fileEditArea.insert("\t", pos);
+            break;
+          case "NEWLINE":
+            fileEditArea.insert("\n", pos);
+            break;
+          default:
+            fileEditArea.insert(insertStr, pos);
+        }
+        enableDocumentListener(fileEditArea.getDocument());
+        break;
+      case "REMOVE_PARTIAL":
+        disableDocumentListener(fileEditArea.getDocument());
+        System.out.println(ARRIVEDPHRASE + msg + " " + value);
+        System.out.println();
+        String[] removeData = value.split(" ", 0);
+        int removeLength = Integer.parseInt(removeData[0]);
+        int removePos = Integer.parseInt(removeData[1]);
+        int start = removePos - removeLength + 1;
+        int end = removePos + 1;
+        fileEditArea.replaceRange("", start, end);
+        enableDocumentListener(fileEditArea.getDocument());
         break;
       default:
         System.out.println("DON'T MATCH");
@@ -212,6 +251,14 @@ public class ETClient extends JFrame implements Runnable {
   void closeSocket(int userNumber) {
     String data = "REMOVE_USER" + " " + (String.valueOf(userNumber));
     sendData(data);
+  }
+
+  void enableDocumentListener(Document doc) {
+    doc.addDocumentListener(listener);
+  }
+
+  void disableDocumentListener(Document doc) {
+    doc.removeDocumentListener(listener);
   }
 
   Socket getSocket() {

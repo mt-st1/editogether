@@ -16,6 +16,8 @@ class ETListener implements ActionListener, EditAreaListener {
   private enum SendType { // 送信する内容の識別子
     FILE_CONTNET,
     FILE_INFO,
+    PARTIAL_INSERT,
+    PARTIAL_REMOVE
   }
 
   public ETListener(ETClient window, Socket socket) {
@@ -57,8 +59,10 @@ class ETListener implements ActionListener, EditAreaListener {
       try {
         br = new BufferedReader(
               new FileReader(file));
+        window.disableDocumentListener(fileEditArea.getDocument());
         fileEditArea.read(br, null);
         window.getSaveButton().setEnabled(true);
+        window.enableDocumentListener(fileEditArea.getDocument());
         String fileStr = getFileStr(file);
         sendData("SHARE_FILE_CONTENT" + " " + fileStr, SendType.FILE_CONTNET);
         sendData("SHARE_FILE_INFO" + " " + filename, SendType.FILE_INFO);
@@ -85,6 +89,7 @@ class ETListener implements ActionListener, EditAreaListener {
     PrintWriter out = new PrintWriter(
                         new BufferedWriter(
                           new OutputStreamWriter(outStream)), true);
+    out.println(data);
     switch(type) {
       case FILE_CONTNET:
         System.out.println(SENDPHRASE + "SHARE_FILE_CONTENT");
@@ -94,8 +99,17 @@ class ETListener implements ActionListener, EditAreaListener {
         System.out.println(SENDPHRASE + data);
         System.out.println();
         break;
+      case PARTIAL_INSERT:
+        System.out.println(SENDPHRASE + data);
+        System.out.println();
+        break;
+      case PARTIAL_REMOVE:
+        System.out.println(SENDPHRASE + data);
+        System.out.println();
+        break;
+      default:
+        System.out.println("DON'T MATCH");
     }
-    out.println(data);
   }
 
   String getFileStr(File file) throws IOException {
@@ -114,16 +128,35 @@ class ETListener implements ActionListener, EditAreaListener {
     int editLength = e.getLength();
     int offset = e.getOffset();
     try {
-      String insertStr = e.getDocument().getText(0, editLength);
-      // server.shareInsertStr(window.getSelf(), offset, insertStr);
+      String insertStr = e.getDocument().getText(offset, editLength);
+      switch(insertStr) {
+        case " ":
+          insertStr = "SPACE";
+          break;
+        case "\t":
+          insertStr = "TAB";
+          break;
+        case "\n":
+          insertStr = "NEWLINE";
+          break;
+      }
+      sendData("SHARE_PARTIAL_INSERT" + " " + insertStr + " " + String.valueOf(offset), SendType.PARTIAL_INSERT);
     } catch(BadLocationException ble) {
       ble.printStackTrace();
+    } catch(IOException ioe) {
+      ioe.printStackTrace();
     }
   }
 
   @Override
   public void handleShareRemove(DocumentEvent e) {
-
+    int editLength = e.getLength();
+    int offset = e.getOffset();
+    try {
+      sendData("SHARE_PARTIAL_REMOVE" + " " + String.valueOf(editLength) + " " + String.valueOf(offset), SendType.PARTIAL_REMOVE);
+    } catch(IOException ioe) {
+      ioe.printStackTrace();
+    }
   }
 
   @Override

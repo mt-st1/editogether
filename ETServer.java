@@ -87,20 +87,8 @@ public class ETServer {
   }
 
   void shareUserList() {
-    OutputStream outStream = null;
-    PrintWriter out = null;
-    for(Socket socket : getClientSockets()) {
-      try {
-        outStream = socket.getOutputStream();
-        out = new PrintWriter(
-                new BufferedWriter(
-                  new OutputStreamWriter(outStream)), true);
-        out.println("SET_USER_LIST" + " " + String.join(" ", getUserNameList()));
-      } catch(IOException ioe) {
-        ioe.printStackTrace();
-      } catch(Exception e) {
-        e.printStackTrace();
-      }
+    for(ETUser user : getUserMap().values()) {
+      user.sendData("SET_USER_LIST" + " " + String.join(" ", getUserNames(user)));
     }
   }
 
@@ -114,9 +102,9 @@ public class ETServer {
                            .collect(Collectors.toList());
   }
 
-  List<Socket> getClientSockets() {
+  List<String> getUserNames(ETUser target) {
     return userMap.values().stream()
-                           .map(user -> user.getSocket())
+                           .map(user -> user == target ? user.getName() + "←You!" : user.getName())
                            .collect(Collectors.toList());
   }
 }

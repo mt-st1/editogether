@@ -51,6 +51,10 @@ public class ETClient extends JFrame implements Runnable {
     fileSelectButton = new JButton("Select file");
     fileSaveButton = new JButton("Save file");
     fileEditButton = new JButton("Edit");
+    UIManager.put("FileChooser.saveButtonText", "Save");
+    UIManager.put("FileChooser.saveButtonToolTipText", "Save the file");
+    UIManager.put("FileChooser.openButtonText", "Open");
+    UIManager.put("FileChooser.cancelButtonText", "Cancel");
 
     fileSelectButton.addActionListener(listener);
     fileSelectButton.setActionCommand("select");
@@ -164,6 +168,7 @@ public class ETClient extends JFrame implements Runnable {
     }
   }
 
+  @SuppressWarnings("unchecked")
   void arrivedData(String msg, String value) throws IOException {
     switch(msg) {
       case "CLOSE_SOCKET":
@@ -172,6 +177,16 @@ public class ETClient extends JFrame implements Runnable {
         if(socket != null) {
           socket.close();
           System.exit(0);
+        }
+        break;
+      case "SET_USER_LIST":
+        System.out.println(ARRIVEDPHRASE + msg);
+        System.out.println();
+        if(value.equals("")) {
+          userList.setModel(new DefaultListModel());
+        } else {
+          String[] usernameList = value.split(" ");
+          userList.setListData(usernameList);
         }
         break;
       case "SET_FILE_CONTENT":

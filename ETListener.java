@@ -33,11 +33,13 @@ class ETListener implements ActionListener, EditAreaListener {
     int btn_status;
 
     if(cmd.equals("select")) {
-      fc.setApproveButtonText("みんなで編集");
-      fc.setApproveButtonToolTipText("選択したファイルをユーザーと共有します");
+      fc.setApproveButtonText("Edit Together!");
+      fc.setApproveButtonToolTipText("Share the selected file with the user");
+      fc.setDialogTitle("File Open");
       btn_status = fc.showOpenDialog(container);
     } else if(cmd.equals("save")) {
       fc.setSelectedFile(new File(window.getFileName()));
+      fc.setDialogTitle("File Save");
       btn_status = fc.showSaveDialog(container);
     } else {
       return;

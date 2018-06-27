@@ -53,6 +53,7 @@ public class ETServer {
           addUser(clientSock, user);
           dos.writeInt(userCount);
         }
+        shareUserList();
       }
     } catch(IllegalArgumentException iae) {
       System.out.println("Port parameter is illegal");
@@ -73,6 +74,7 @@ public class ETServer {
     userMap.remove(userNo);
     displayUserList();
     user.isRemoved = true;
+    shareUserList();
   }
 
   void displayUserList() {
@@ -84,6 +86,24 @@ public class ETServer {
     System.out.println();
   }
 
+  void shareUserList() {
+    OutputStream outStream = null;
+    PrintWriter out = null;
+    for(Socket socket : getClientSockets()) {
+      try {
+        outStream = socket.getOutputStream();
+        out = new PrintWriter(
+                new BufferedWriter(
+                  new OutputStreamWriter(outStream)), true);
+        out.println("SET_USER_LIST" + " " + String.join(" ", getUserNameList()));
+      } catch(IOException ioe) {
+        ioe.printStackTrace();
+      } catch(Exception e) {
+        e.printStackTrace();
+      }
+    }
+  }
+
   HashMap<Integer, ETUser> getUserMap() {
     return (HashMap<Integer, ETUser>)userMap;
   }
@@ -91,6 +111,12 @@ public class ETServer {
   List<String> getUserNameList() {
     return userMap.values().stream()
                            .map(user -> user.getName())
+                           .collect(Collectors.toList());
+  }
+
+  List<Socket> getClientSockets() {
+    return userMap.values().stream()
+                           .map(user -> user.getSocket())
                            .collect(Collectors.toList());
   }
 }

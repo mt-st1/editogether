@@ -18,6 +18,7 @@ public class ETClient extends JFrame implements Runnable {
   private ETListener listener; // リスナ
   private String myName; // ユーザーネーム
   private int myNumber; // ユーザー番号
+  private String filename; // 編集しているファイル名
   private Thread thread; // サーバーからの情報監視用スレッド
 
   // Swingコンポーネント
@@ -27,7 +28,6 @@ public class ETClient extends JFrame implements Runnable {
   private JButton fileSelectButton; // ファイル選択ボタン
   private JButton fileSaveButton; // ファイル保存ボタン
   private JButton fileEditButton; // ファイル編集ボタン
-  private String filename; // 編集しているファイル名
 
   public static void main(String[] args) {
     ETClient window = new ETClient();
@@ -77,15 +77,17 @@ public class ETClient extends JFrame implements Runnable {
     userPanel.add(new JLabel("Edit Friends"), BorderLayout.NORTH);
     userPanel.add(new JScrollPane(userList), BorderLayout.CENTER);
 
+    this.getContentPane().add(new JScrollPane(fileEditArea), BorderLayout.CENTER);
+    this.getContentPane().add(filePanel, BorderLayout.NORTH);
+    this.getContentPane().add(userPanel, BorderLayout.WEST);
+
     if(myName != null) {
       setTitle(APPNAME + "  " + myName);
     } else {
       setTitle(APPNAME);
     }
 
-    this.getContentPane().add(new JScrollPane(fileEditArea), BorderLayout.CENTER);
-    this.getContentPane().add(filePanel, BorderLayout.NORTH);
-    this.getContentPane().add(userPanel, BorderLayout.WEST);
+    sendData("PULL_CURRENT" + " " + (String.valueOf(myNumber)), true);
 
     this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
     this.addWindowListener(new WindowAdapter() {
@@ -170,7 +172,30 @@ public class ETClient extends JFrame implements Runnable {
 
   @SuppressWarnings("unchecked")
   void arrivedData(String msg, String value) throws IOException {
+    String data;
     switch(msg) {
+      case "ENABLE_EDITAREA":
+        System.out.println(ARRIVEDPHRASE + msg);
+        System.out.println();
+        fileEditArea.setEditable(true);
+        break;
+      case "DISABLE_EDITAREA":
+        System.out.println(ARRIVEDPHRASE + msg);
+        System.out.println();
+        fileEditArea.setEditable(false);
+        break;
+      case "GIVE_CONTENT":
+        System.out.println(ARRIVEDPHRASE + msg);
+        System.out.println();
+        data = "SET_CONTENT" + " " + value + " "  + getContent();
+        sendData(data, false);
+        break;
+      case "GIVE_FILENAME":
+        System.out.println(ARRIVEDPHRASE + msg);
+        System.out.println();
+        data = "SET_FILENAME" + " " + value + " " + getFileName();
+        sendData(data, true);
+        break;
       case "CLOSE_SOCKET":
         System.out.println(ARRIVEDPHRASE + msg);
         System.out.println();
@@ -189,6 +214,13 @@ public class ETClient extends JFrame implements Runnable {
           userList.setListData(usernameList);
         }
         break;
+      case "SET_CONTENT":
+        System.out.println(ARRIVEDPHRASE + msg);
+        System.out.println();
+        disableDocumentListener(fileEditArea.getDocument());
+        fileEditArea.setText(value.replaceAll(FILESEP, "\n"));
+        enableDocumentListener(fileEditArea.getDocument());
+        break;
       case "SET_FILE_CONTENT":
         System.out.println(ARRIVEDPHRASE + msg);
         System.out.println();
@@ -198,6 +230,9 @@ public class ETClient extends JFrame implements Runnable {
         for(String line : lines) {
           fileEditArea.append(line + "\n");
         }
+        int fileLen = fileEditArea.getText().length();
+        System.out.println("fileLen: " + fileLen);
+        fileEditArea.replaceRange("", fileLen-1, fileLen);
         enableDocumentListener(fileEditArea.getDocument());
         fileSaveButton.setEnabled(true);
         break;
@@ -205,6 +240,7 @@ public class ETClient extends JFrame implements Runnable {
         System.out.println(ARRIVEDPHRASE + msg + " " + value);
         System.out.println();
         setFileName(value);
+        fileSaveButton.setEnabled(true);
         break;
       case "INSERT_PARTIAL":
         disableDocumentListener(fileEditArea.getDocument());
@@ -245,11 +281,11 @@ public class ETClient extends JFrame implements Runnable {
     }
   }
 
-  void sendData(String data) {
+  void sendData(String data, boolean detail) {
     OutputStream outStream = null;
     PrintWriter out = null;
-    System.out.println(SENDPHRASE + data);
-    System.out.println();
+    if(detail) System.out.println(SENDPHRASE + data + "\n");
+    else System.out.println(SENDPHRASE + data.split(" ", 2)[0] + "\n");
     try {
       outStream = socket.getOutputStream();
       out = new PrintWriter(
@@ -265,7 +301,7 @@ public class ETClient extends JFrame implements Runnable {
 
   void closeSocket(int userNumber) {
     String data = "REMOVE_USER" + " " + (String.valueOf(userNumber));
-    sendData(data);
+    sendData(data, true);
   }
 
   void enableDocumentListener(Document doc) {
@@ -278,10 +314,6 @@ public class ETClient extends JFrame implements Runnable {
 
   Socket getSocket() {
     return this.socket;
-  }
-
-  int getNumber() {
-    return this.myNumber;
   }
 
   JTextArea getTextArea() {
@@ -298,6 +330,29 @@ public class ETClient extends JFrame implements Runnable {
 
   JButton getSaveButton() {
     return this.fileSaveButton;
+  }
+
+  String getContent() {
+    String fileTxt = fileEditArea.getText();
+    int fileLen = fileTxt.length();
+    if(fileTxt.equals("")) {
+      String[] lines = fileTxt.split("\n");
+      return String.join(FILESEP, lines);
+    } else {
+      if(fileTxt.charAt(fileLen-1) == '\n') {
+        String fileSeps = "";
+        int i = fileLen-1;
+        while(fileTxt.charAt(i) == '\n') {
+          fileSeps += FILESEP;
+          i--;
+        }
+        String[] lines = fileTxt.split("\n");
+        return String.join(FILESEP, lines) + fileSeps;
+      } else {
+        String[] lines = fileTxt.split("\n");
+        return String.join(FILESEP, lines);
+      }
+    }
   }
 
   String getFileName() {

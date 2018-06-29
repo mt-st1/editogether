@@ -63,6 +63,8 @@ class ETListener implements ActionListener, EditAreaListener {
               new FileReader(file));
         window.disableDocumentListener(fileEditArea.getDocument());
         fileEditArea.read(br, null);
+        int fileLen = fileEditArea.getText().length();
+        fileEditArea.replaceRange("", fileLen-1, fileLen);
         window.getSaveButton().setEnabled(true);
         window.enableDocumentListener(fileEditArea.getDocument());
         String fileStr = getFileStr(file);
@@ -115,12 +117,12 @@ class ETListener implements ActionListener, EditAreaListener {
   }
 
   String getFileStr(File file) throws IOException {
-    BufferedReader br = new BufferedReader(new FileReader(file));
+    BufferedReader reader = new BufferedReader(new FileReader(file));
     java.util.List<String> lines = new ArrayList<String>();
-    String line = br.readLine();
+    String line = reader.readLine();
     while(line != null) {
       lines.add(line);
-      line = br.readLine();
+      line = reader.readLine();
     }
     return String.join(FILESEP, lines);
   }

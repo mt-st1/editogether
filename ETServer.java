@@ -8,6 +8,7 @@ public class ETServer {
   private ServerSocket servSock; // サーバーソケット
   private Map<Integer, ETUser> userMap; // 接続しているクライアントユーザーのハッシュマップ
   private int userCount; // 接続したクライアントの数
+  static boolean isFileSelected = false; // ファイルが選択されているかどうか
 
   // シングルトンパターン
   // ETServerインスタンスはただ1つ
@@ -104,7 +105,7 @@ public class ETServer {
 
   List<String> getUserNames(ETUser target) {
     return userMap.values().stream()
-                           .map(user -> user == target ? user.getName() + "←You!" : user.getName())
+                           .map(user -> user == target ? "★" + user.getName() : user.getName())
                            .collect(Collectors.toList());
   }
 }
@@ -152,7 +153,40 @@ class ETUser implements Runnable {
   }
 
   void arrivedData(String msg, String value) throws IOException {
+    ETUser target;
+    String[] data;
     switch(msg) {
+      case "PULL_CURRENT":
+        System.out.println("from " + getName());
+        System.out.println(ARRIVEDPHRASE + msg);
+        System.out.println();
+        shareOthers("DISABLE_EDITAREA", "", false);
+        List<ETUser> users = new ArrayList<ETUser>(server.getUserMap().values());
+        target = users.get(0);
+        sendDataTo(target.getSocket(), "GIVE_CONTENT" + " " + value);
+        if(ETServer.isFileSelected) {
+          sendDataTo(target.getSocket(), "GIVE_FILENAME" + " " + value);
+        }
+        break;
+      case "SET_CONTENT":
+        System.out.println("from " + getName());
+        System.out.println(ARRIVEDPHRASE + msg);
+        System.out.println();
+        data = value.split(" ", 2);
+        target = server.getUserMap().get(Integer.parseInt(data[0]));
+        String content = data[1];
+        sendDataTo(target.getSocket(), "SET_CONTENT" + " " + content);
+        shareAllUser("ENABLE_EDITAREA", "");
+        break;
+      case "SET_FILENAME":
+        System.out.println("from " + getName());
+        System.out.println(ARRIVEDPHRASE + msg);
+        System.out.println();
+        data = value.split(" ");
+        target = server.getUserMap().get(Integer.parseInt(data[0]));
+        String filename = data[1];
+        sendDataTo(target.getSocket(), "SET_FILE_INFO" + " " + filename);
+        break;
       case "REMOVE_USER":
         System.out.println("from " + getName());
         System.out.println(ARRIVEDPHRASE + msg);
@@ -169,6 +203,7 @@ class ETUser implements Runnable {
         System.out.println(ARRIVEDPHRASE + msg);
         System.out.println();
         shareOthers("SET_FILE_CONTENT", value, false);
+        ETServer.isFileSelected = true;
         break;
       case "SHARE_FILE_INFO":
         System.out.println("from " + getName());
@@ -227,14 +262,32 @@ class ETUser implements Runnable {
   }
 
   void shareOthers(String msg, String value, boolean detail) {
+    String data = "";
     for(ETUser user : server.getUserMap().values()) {
       if(user != this) {
-        String data = msg + " " + value;
+        if(value.isEmpty()) {
+          data = msg;
+        } else {
+          data = msg + " " + value;
+        }
         sendDataTo(user.getSocket(), data);
-        if(detail) System.out.println(SENDPHRASE + data + "\n");
-        else System.out.println(SENDPHRASE + msg + "\n");
       }
     }
+    if(detail) System.out.println(SENDPHRASE + data + "\n");
+    else System.out.println(SENDPHRASE + msg + "\n");
+  }
+
+  void shareAllUser(String msg, String value) {
+    String data = "";
+    for(ETUser user : server.getUserMap().values()) {
+      if(value.isEmpty()) {
+        data = msg;
+      } else {
+        data = msg + " " + value;
+      }
+      sendDataTo(user.getSocket(), data);
+    }
+    System.out.println(SENDPHRASE + msg + "\n");
   }
 
   Socket getSocket() {

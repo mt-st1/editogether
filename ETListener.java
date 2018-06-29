@@ -17,7 +17,8 @@ class ETListener implements ActionListener, EditAreaListener {
     FILE_CONTNET,
     FILE_INFO,
     PARTIAL_INSERT,
-    PARTIAL_REMOVE
+    PARTIAL_REMOVE,
+    EDIT_INFO
   }
 
   public ETListener(ETClient window, Socket socket) {
@@ -30,19 +31,37 @@ class ETListener implements ActionListener, EditAreaListener {
     String cmd = e.getActionCommand();
     Container container = window.getContentPane();
     JFileChooser fc = new JFileChooser();
-    int btn_status;
+    int btn_status = 99;
 
-    if(cmd.equals("select")) {
-      fc.setApproveButtonText("Edit Together!");
-      fc.setApproveButtonToolTipText("Share the selected file with the user");
-      fc.setDialogTitle("File Open");
-      btn_status = fc.showOpenDialog(container);
-    } else if(cmd.equals("save")) {
-      fc.setSelectedFile(new File(window.getFileName()));
-      fc.setDialogTitle("File Save");
-      btn_status = fc.showSaveDialog(container);
-    } else {
-      return;
+    try {
+      if(cmd.equals("select")) {
+        fc.setApproveButtonText("Edit Together!");
+        fc.setApproveButtonToolTipText("Share the selected file with the user");
+        fc.setDialogTitle("File Open");
+        btn_status = fc.showOpenDialog(container);
+      } else if(cmd.equals("save")) {
+        fc.setSelectedFile(new File(window.getFileName()));
+        fc.setDialogTitle("File Save");
+        btn_status = fc.showSaveDialog(container);
+      } else if(cmd.equals("begin_edit")) {
+        window.getTextArea().setEditable(true);
+        window.getEditorLabel().setText(window.getMyName() + " is editing.");
+        sendData("BEGIN_EDIT", SendType.EDIT_INFO);
+        window.getEditButton().setText("Finish Edit");
+        window.getEditButton().setActionCommand("finish_edit");
+      } else if(cmd.equals("finish_edit")) {
+        window.getTextArea().setEditable(false);
+        window.getEditorLabel().setText("Nobody is editing.");
+        sendData("FINISH_EDIT", SendType.EDIT_INFO);
+        window.getEditButton().setText("Begin Edit");
+        window.getEditButton().setActionCommand("begin_edit");
+      } else {
+        return;
+      }
+    } catch(IOException ioe) {
+      ioe.printStackTrace();
+    } catch(Exception exception) {
+      exception.printStackTrace();
     }
 
     if(btn_status != JFileChooser.APPROVE_OPTION) {
@@ -108,6 +127,10 @@ class ETListener implements ActionListener, EditAreaListener {
         System.out.println();
         break;
       case PARTIAL_REMOVE:
+        System.out.println(SENDPHRASE + data);
+        System.out.println();
+        break;
+      case EDIT_INFO:
         System.out.println(SENDPHRASE + data);
         System.out.println();
         break;

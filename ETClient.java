@@ -25,6 +25,7 @@ public class ETClient extends JFrame implements Runnable {
   private JTextArea fileEditArea; // ファイルを編集するテキストエリア
   private JList userList; // クライアント(ユーザー)のリスト
   private JLabel filenameLabel; // ファイル名のラベル
+  private JLabel editorLabel; // 現在編集しているユーザのラベル
   private JButton fileSelectButton; // ファイル選択ボタン
   private JButton fileSaveButton; // ファイル保存ボタン
   private JButton fileEditButton; // ファイル編集ボタン
@@ -46,11 +47,12 @@ public class ETClient extends JFrame implements Runnable {
 
     listener = new ETListener(this, socket);
     fileEditArea = new JTextArea();
+    fileEditArea.setEditable(false);
     enableDocumentListener(fileEditArea.getDocument());
     userList = new JList();
     fileSelectButton = new JButton("Select file");
     fileSaveButton = new JButton("Save file");
-    fileEditButton = new JButton("Edit");
+    fileEditButton = new JButton("Begin Edit");
     UIManager.put("FileChooser.saveButtonText", "Save");
     UIManager.put("FileChooser.saveButtonToolTipText", "Save the file");
     UIManager.put("FileChooser.openButtonText", "Open");
@@ -64,14 +66,16 @@ public class ETClient extends JFrame implements Runnable {
     fileSaveButton.setEnabled(false);
 
     fileEditButton.addActionListener(listener);
-    fileEditButton.setActionCommand("edit");
+    fileEditButton.setActionCommand("begin_edit");
 
     filePanel.setLayout(new FlowLayout());
     filenameLabel = new JLabel("Let's select file");
+    editorLabel = new JLabel("Nobody is editing.");
     filePanel.add(filenameLabel);
     filePanel.add(fileSelectButton);
     filePanel.add(fileSaveButton);
     filePanel.add(fileEditButton);
+    filePanel.add(editorLabel);
 
     userPanel.setLayout(new BorderLayout());
     userPanel.add(new JLabel("Edit Friends"), BorderLayout.NORTH);
@@ -231,7 +235,6 @@ public class ETClient extends JFrame implements Runnable {
           fileEditArea.append(line + "\n");
         }
         int fileLen = fileEditArea.getText().length();
-        System.out.println("fileLen: " + fileLen);
         fileEditArea.replaceRange("", fileLen-1, fileLen);
         enableDocumentListener(fileEditArea.getDocument());
         fileSaveButton.setEnabled(true);
@@ -275,6 +278,14 @@ public class ETClient extends JFrame implements Runnable {
         int end = removePos + 1;
         fileEditArea.replaceRange("", start, end);
         enableDocumentListener(fileEditArea.getDocument());
+        break;
+      case "DISABLE_EDIT_BUTTON":
+        fileEditButton.setEnabled(false);
+        editorLabel.setText(value + " is editing.");
+        break;
+      case "ENABLE_EDIT_BUTTON":
+        fileEditButton.setEnabled(true);
+        editorLabel.setText("Nobody is editing.");
         break;
       default:
         System.out.println("DON'T MATCH");
@@ -324,12 +335,20 @@ public class ETClient extends JFrame implements Runnable {
     return this.filenameLabel;
   }
 
+  JLabel getEditorLabel() {
+    return this.editorLabel;
+  }
+
   JButton getSelectButton() {
     return this.fileSelectButton;
   }
 
   JButton getSaveButton() {
     return this.fileSaveButton;
+  }
+
+  JButton getEditButton() {
+    return this.fileEditButton;
   }
 
   String getContent() {
@@ -353,6 +372,10 @@ public class ETClient extends JFrame implements Runnable {
         return String.join(FILESEP, lines);
       }
     }
+  }
+
+  String getMyName() {
+    return this.myName;
   }
 
   String getFileName() {

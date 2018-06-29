@@ -160,7 +160,6 @@ class ETUser implements Runnable {
         System.out.println("from " + getName());
         System.out.println(ARRIVEDPHRASE + msg);
         System.out.println();
-        shareOthers("DISABLE_EDITAREA", "", false);
         List<ETUser> users = new ArrayList<ETUser>(server.getUserMap().values());
         target = users.get(0);
         sendDataTo(target.getSocket(), "GIVE_CONTENT" + " " + value);
@@ -176,7 +175,6 @@ class ETUser implements Runnable {
         target = server.getUserMap().get(Integer.parseInt(data[0]));
         String content = data[1];
         sendDataTo(target.getSocket(), "SET_CONTENT" + " " + content);
-        // shareAllUser("ENABLE_EDITAREA", "");
         break;
       case "SET_FILENAME":
         System.out.println("from " + getName());
@@ -286,19 +284,6 @@ class ETUser implements Runnable {
     if(detail) System.out.println(SENDPHRASE + data + "\n");
     else System.out.println(SENDPHRASE + msg + "\n");
   }
-
-  // void shareAllUser(String msg, String value) {
-  //   String data = "";
-  //   for(ETUser user : server.getUserMap().values()) {
-  //     if(value.isEmpty()) {
-  //       data = msg;
-  //     } else {
-  //       data = msg + " " + value;
-  //     }
-  //     sendDataTo(user.getSocket(), data);
-  //   }
-  //   System.out.println(SENDPHRASE + msg + "\n");
-  // }
 
   Socket getSocket() {
     return this.socket;

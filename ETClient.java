@@ -178,16 +178,6 @@ public class ETClient extends JFrame implements Runnable {
   void arrivedData(String msg, String value) throws IOException {
     String data;
     switch(msg) {
-      case "ENABLE_EDITAREA":
-        System.out.println(ARRIVEDPHRASE + msg);
-        System.out.println();
-        fileEditArea.setEditable(true);
-        break;
-      case "DISABLE_EDITAREA":
-        System.out.println(ARRIVEDPHRASE + msg);
-        System.out.println();
-        fileEditArea.setEditable(false);
-        break;
       case "GIVE_CONTENT":
         System.out.println(ARRIVEDPHRASE + msg);
         System.out.println();
